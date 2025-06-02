@@ -30,7 +30,7 @@ class MyDataset(Dataset):
         if root_path is not None:
             self.root_path = root_path
         elif hasattr(args, 'root_path'):
-            self.root_path = args.root_path  # Ensure root_path is correctly handled
+            self.root_path = args.root_path  
         else:
             self.root_path = None
 
@@ -92,7 +92,7 @@ class MyDataset(Dataset):
             self.data_stamp = None
 
     def __len__(self):
-        # Adjust length calculation based on win_size and step (similar to your PSMSegLoader example)
+        
         if self.set_type == "train":
             return (self.data_x.shape[0] - self.win_size) // self.step + 1
         elif self.set_type == 'val':
