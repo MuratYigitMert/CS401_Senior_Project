@@ -1,28 +1,45 @@
+from tods.tods.detection_algorithm.PyodIsolationForest import IsolationForestPrimitive
+from d3m import container
 import pandas as pd
-import matplotlib.pyplot as plt
 
-# Load the original ETH price data
-eth_df = pd.read_csv('Crypto_Data_Csv/ETHUSDT_H1.csv')
-eth_df['datetime'] = pd.to_datetime(eth_df['datetime'])
+csv_path = 'crypto_data/ETHUSDT_H1.csv'
 
-# Clean and align with detection input (ensure same order as used for TODS)
-eth_df = eth_df[['datetime', 'open', 'high', 'low', 'close', 'volume']].dropna().reset_index(drop=True)
+df = pd.read_csv(csv_path)
 
-# Load the Isolation Forest detection results
-result_df = pd.read_csv('FinalReportFiles/ETHUSDT_H1_IsolationForest_results.csv').reset_index(drop=True)
+df = df[['open', 'high', 'low', 'close', 'volume']].dropna() 
 
-# Attach anomaly results to original DataFrame
-eth_df['Anomaly'] = result_df['TODS.anomaly_detection_primitives.IsolationForest0_0']  # Adjust column name if needed
+df_d3m = container.DataFrame(df)
 
-# Plot close price with anomalies
-plt.figure(figsize=(14, 6))
-plt.plot(eth_df['datetime'], eth_df['close'], label='ETH Close Price')
-plt.scatter(eth_df[eth_df['Anomaly'] == 1]['datetime'],
-            eth_df[eth_df['Anomaly'] == 1]['close'],
-            color='red', label='Detected Anomalies', marker='x')
-plt.title('ETH Price with Anomalies Detected by Isolation Forest (TODS)')
-plt.xlabel('Datetime')
-plt.ylabel('Close Price')
-plt.legend()
-plt.tight_layout()
-plt.show()
+hyperparams = {
+    'window_size': 50,
+    'step_size' : 1,
+    'metric_params': None,
+    'use_semantic_types': False,
+    'return_subseq_inds': False,
+    'return_semantic_type': None,
+    'return_result': True,
+    'add_index_columns': False,
+    'return_result': 'replace',
+    'contamination': 0.1,
+    'n_estimators': 100,
+    'max_samples': 'auto',
+    'max_features': 1,
+    'bootstrap': False,
+    'behaviour': 'old',
+    'random_state': None,
+    'verbose': 0
+}
+
+IsoForest = IsolationForestPrimitive(hyperparams=hyperparams)
+
+IsoForest.set_training_data(inputs=df_d3m)
+
+IsoForest.fit()
+
+result = IsoForest.produce(inputs=df_d3m)
+
+result_df = result.value
+
+result_csv_path = 'results/ETHUSDT_H1_IsolationForest_results.csv'
+
+result_df.to_csv(result_csv_path, index=False)

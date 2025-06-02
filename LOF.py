@@ -1,29 +1,42 @@
+from tods.tods.detection_algorithm.PyodLOF import LOFPrimitive
 import pandas as pd
-import matplotlib.pyplot as plt
+from d3m import container
 
-# Load original ETH data (ensure datetime column is correct)
-df = pd.read_csv('Crypto_Data_Csv/ETHUSDT_H1.csv')
-df['open_time'] = pd.to_datetime(df['datetime'])  # Adjust if named differently
+df = pd.read_csv('crypto_data/ETHUSDT_H1.csv')
 
-# Load saved LOF results
-result_df = pd.read_csv('Roshaan_Anomaly_Results/SOLUSDT_H1_LOF_results.csv')
+df = df[['open', 'high', 'low', 'close', 'volume']].dropna()
 
-# Align indices
-df = df.loc[result_df.index].reset_index(drop=True)
-result_df = result_df.reset_index(drop=True)
+df_d3m = container.DataFrame(df)
 
-# Add anomaly labels
-df['Anomaly'] = result_df['TODS.anomaly_detection_primitives.LOFPrimitive0_0']
+hyperparams = {
+    'window_size': 50,
+    'step_size' : 1,
+    'metric_params': None,
+    'use_semantic_types': False,
+    'return_subseq_inds': False,
+    'return_semantic_type': None,
+    'return_result': True,
+    'add_index_columns': False,
+    'return_result': 'replace',
+    'n_neighbors': 20,
+    'algorithm' : 'kd_tree',
+    'leaf_size' : 30,
+    'metric' : 'minkowski',
+    'p' : 2,
+    'contamination' : 0.1,
+    'n_jobs' : 1
+}
 
-# Plot Close price with anomalies
-plt.figure(figsize=(14,6))
-plt.plot(df['open_time'], df['close'], label='ETH Close Price')
-plt.scatter(df[df['Anomaly'] == 1]['open_time'],
-            df[df['Anomaly'] == 1]['close'],
-            color='red', label='Detected Anomalies', marker='x')
-plt.title('ETH Price with Anomalies Detected by LOF (Loaded Results)')
-plt.xlabel('Time')
-plt.ylabel('Close Price')
-plt.legend()
-plt.tight_layout()
-plt.show()
+lof = LOFPrimitive(hyperparams=hyperparams)
+
+lof.set_training_data(inputs=df_d3m)
+
+lof.fit()
+
+result = lof.produce(inputs=df_d3m)
+
+result_df = result.value
+
+result_csv_path = 'results/ETHUSDT_H1_LOF_results.csv'
+
+result_df.to_csv(result_csv_path, index=False)
